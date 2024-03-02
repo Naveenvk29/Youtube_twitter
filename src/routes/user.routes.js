@@ -24,20 +24,24 @@ router.route("/register").post(
   ]),
   registerUser
 );
-
 router.route("/login").post(loginUser);
+// secured routes
 router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/refresh-token").post(refereshAccessToken);
 router.route("/change-password").post(verifyJWT, changeCurrentPassword);
-router.route("/current-user").post(verifyJWT, getCurrentUser);
+router.route("/current-user").get(verifyJWT, getCurrentUser);
 router.route("/change-account").post(verifyJWT, updateAccountDetails);
 
-//
+//image rous
 router
   .route("/avatar")
   .patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
 router
   .route("/cover-image")
   .patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage);
+
+//getroutes
+router.route("/c/:username").get(verifyJWT, getUserChannelProfile);
+router.route("/history").get(verifyJWT, getWatchHistory);
 
 export default router;
