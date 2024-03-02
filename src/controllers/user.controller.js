@@ -242,7 +242,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   }
   user.password = newPassword;
   await user.save({ validateBeforeSave: false });
-  res.status(201).json(new ApiResponse(), {}, "Password Changed Successfully");
+  res
+    .status(201)
+    .json(new ApiResponse(200), {}, "Password Changed Successfully");
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -328,6 +330,76 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Cover image updated successfully"));
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { user } = req.params;
+
+  if (!user?.trim()) {
+    throw new ApiError(400, "User Id is missing");
+  }
+
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        form: "subscriptions",
+        localField: "_id",
+        foreignField: "subscribers",
+        as: "subscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+        channelSubscribedToCount: {
+          $size: "$subscribedTo",
+        },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        fullName: 1,
+        email: 1,
+        username: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+      },
+    },
+  ]);
+
+  if (!channel.length) {
+    throw new ApiError(404, "Channel not found or exists");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, channel, "Channel fetched successfully"));
+});
+const getWatchHistory = asyncHandler(async (req, res) => {});
+
 export {
   registerUser,
   loginUser,
@@ -338,4 +410,6 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
+  getWatchHistory,
 };
